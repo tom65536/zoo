@@ -1,0 +1,57 @@
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "zoo-lang"
+authors = [
+   { name = "tom65536", email = "scamped@planet.ms" }
+]
+readme = "README.md"
+dynamic = ["version", "description"]
+requires-python = ">=3.11"
+classifiers = [
+   "Programming Language :: Python :: 3",
+   "License :: OSI Approved :: MIT License",
+   "Operating System :: OS Independent"
+]
+
+dependencies = [
+   "lark"
+]
+
+[project.optional-dependencies]
+dev = [
+   "invoke>=2.2"
+   "pytest>=7.0.0",
+   "black>=23.0.0",
+   "mypy>=1.0.0",
+   "ruff>=0.1.0"
+]
+test = [
+   "pytest>=7.0.0"
+]
+
+[project.urls]
+Homepage = "https://github.com/tom65536/zoo"
+Repository = "https://github.com/tom65536/zoo"
+
+[tool.flit.module]
+name = "zoo"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v"
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+
+[tool.mypy]
+ignore_missing_imports = true
+check_untyped_defs = true
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+select = ["E", "F", "W", "I001"]
