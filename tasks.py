@@ -58,7 +58,8 @@ def docparse(_):
    )
 
    for example in examples:
-      print('~' * 30)
+      print('\n')
+      print('=' * 30)
       print(example.source)
       print('-' * 30)
       try:

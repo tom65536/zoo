@@ -190,21 +190,39 @@ alphabet may be used.
    >>> var number = 1_000_000
    ... var thirty_nine = ೩೯
 
+An optional metric or binary prefix
+may be added to the literal:
+
+   >>> assert 15k == 15_000
+   ... assert 12Ki == 12_288 # == 12*1024
+
 ::
 
    int_literal: DECIMAL_INT_LITERAL
 
-   DECIMAL_INT_LITERAL: /[-+]?\p{Nd}+(_\p{Nd}+)*/
+   DECIMAL_INT_LITERAL: /[-+]?\p{Nd}+(_\p{Nd}+)*(da|h|[kKMGTPEZYRQ]i?)?/
 
 
 
 Floating Point Literals
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-TODO
+Floating point literals must contain
+a decimal point; an optional exponent
+and a metric or binary prefix may be added.
+
+::
+
+   float_literal: DECIMAL_FLOAT_LITERAL
+
+   DECIMAL_FLOAT_LITERAL: /[-+]?\p{Nd}+(_\p{Nd}+)*\.(\p{Nd}+(_\p{Nd}+)*)?([eE][-+]?\p{Nd}+(_\p{Nd}+)*)?([qryzafpnμumcd]|da|h|[kKMGTPEZYRQ]i?)?/
+
 
 Character Literals
 ~~~~~~~~~~~~~~~~~~
+
+- RFC 1345
+- 
 
 ::
 
@@ -246,7 +264,7 @@ a line consisting of at least three
 consecutive hyphens.
 
   >>> # Here comes meta data
-  ... ---
+  ... --------------------
   ... version: 1.0.6
   ... license-spdx: MIT
   ... ---
@@ -291,8 +309,10 @@ the suffix ``.zoo``.
    ?start: module
 
    module: _NL? _module_unit constructor? _NL*
+      | _NL? constructor _NL*
 
-   _module_unit: module_head _unit
+   _module_unit: module_head _unit?
+      | _unit
 
    _common_unit: _common_head _unit
 
@@ -336,7 +356,6 @@ the suffix ``.zoo``.
       | cue_decl
       | event_decl
       | method_decl
-      | _pass
 
    class_def: "class" class_name type_params? _cons_param_list? _NL _INDENT _class_body _DEDENT
    interface_def: "interface" interface_name type_params? _NL _INDENT _iface_body _DEDENT
@@ -818,6 +837,8 @@ Operator Precedence
       | list_expr
       | string_interpolation
       | string_literal
+      | int_literal
+      | float_literal
       | named_ref
 
    subscript_operator: SUBS
