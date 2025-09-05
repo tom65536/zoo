@@ -2,16 +2,21 @@
 
 An experimental language.
 """
-
+import json
 import unicodedata
 from dataclasses import dataclass, field
 from functools import cache
+from pathlib import Path
 from typing import Any
 
+from emoji import emojize
 
 from lark import Lark, ParseTree, Transformer
+from lark.exceptions import UnexpectedCharacters
 from lark.indenter import Indenter
 from lark import Token
+
+import regex
 
 from ruamel.yaml import YAML
 
@@ -52,9 +57,20 @@ DECIMAL_SUFFIXES = {
    'R': (1000**9, 1.0E+03**9),
    'Ri': (1024**9, 1.024E+03**9),
    'Q': (1000**10, 1.0E+03**10),
-   'Qi': (1024**10, 1.024E+03**10),
-   
-   
+   'Qi': (1024**10, 1.024E+03**10),   
+}
+
+BACKSLASH_ESC = {
+   '\\': '\\',
+   '"': '"',
+   'a': '\x07',
+   'b': '\x08',
+   'e': '\x1B',
+   'f': '\x0C',
+   'n': '\x0A',
+   'r': '\x0D',
+   't': '\x09',
+   'v': '\x0B',    
 }
 
 
@@ -108,22 +124,148 @@ class ZooTransformer(Transformer):
          token,
       )
 
+      
+   def DECIMAL_FLOAT_LITERAL(self, token: Token) -> Token:
+      """Normalize decimal float literal."""
+      result = ''
+      suffix = ''
+      for ch in token:
+         if ch in ('-', '+', '.'):
+            result += ch
+         elif ch == '_':
+            continue
+         elif ch >= 'A' and ch <= 'z':
+            suffix += ch
+         else:
+            result += chr(
+               ord('0') + unicodedata.decimal(ch)
+            )
+      
+      fres = float(result)
+      if suffix:
+         _, fsuff = DECIMAL_SUFFIXES.get(suffix, (1, 1.0))
+         fres *= fsuff
+      return Token.new_borrow_pos(
+         token.type,
+         fres,
+         token,
+      )
+
+   def CHAR_LITERAL(self, token: Token) -> Token:
+      """Normalize character literals."""
+      return Token.new_borrow_pos(
+         token.type,
+         normalize_char_literal(str(token)),
+         token,
+      )
+   
+   def RAW_STRING_LITERAL(self, token: Token) -> Token:
+      """Normalize raw string literals."""
+      data = str(token.value)[1:-1]
+      lines = regex.split(r'\p{Zs}*(?:\r\n|[\p{Zl}\p{Zp}\r\n])\p{Zs}*&?', data)
+      return Token.new_borrow_pos(
+         token.type,
+         '\n'.join(lines),
+         token,
+      )
+      
+   def STRING_LITERAL_QQ(self, token: Token) -> Token:
+     """Normalize string literals."""
+     return Token.new_borrow_pos(
+        token.type,
+        normalize_string_literal(str(token[1:-1])),
+        token,
+     )
+     
+   def STRING_LITERAL_QB(self, token: Token) -> Token:
+     """Normalize string literals."""
+     return Token.new_borrow_pos(
+        token.type,
+        normalize_string_literal(str(token[1:-2])),
+        token,
+     )
+
+     
+   def STRING_LITERAL_BQ(self, token: Token) -> Token:
+     """Normalize string literals."""
+     return Token.new_borrow_pos(
+        token.type,
+        normalize_string_literal(str(token[2:-1])),
+        token,
+     )
+
+   
+   def STRING_LITERAL_BB(self, token: Token) -> Token:
+     """Normalize string literals."""
+     return Token.new_borrow_pos(
+        token.type,
+        normalize_string_literal(str(token[2:-2])),
+        token,
+     )
+
+     
    def get_module(self) -> ZooModule:
       return self._module
 
+STRING_PARSER = regex.compile(
+   r"(?P<txt>[^\\\"\n\r\p{Zl}\p{Zp}]+)"
+   + r"|(?P<esc>\\[" +(''.join(BACKSLASH_ESC.keys()))+'])'
+   + r"|(?P<chr>\\'.[^']*')"
+   + r"|(?P<lbr>\\?\p{Zs}*(\r\n|[\p{Zl}\p{Zp}\r\n])\p{Zs}*&?)"
+)
+
+def normalize_string_literal(value: str) -> str:
+   """Normalize string literals."""
+   result = ''
+   for m in STRING_PARSER.finditer(value):
+      kind = m.lastgroup
+      chunk = m.group()
+      if kind == 'txt':
+         result += chunk
+      elif kind == 'esc':
+         result += BACKSLASH_ESC[chunk[1]]
+      elif kind == 'chr':
+         result += normalize_char_literal(chunk[1:])
+      elif '\\' not in chunk:
+         result += '\n'
+   return result
+
+def normalize_char_literal(value: str) -> str:
+   """Normalize character literal."""
+   data: str = value[1:-1]
+   if data.startswith('\\'):
+      data = BACKSLASH_ESC.get(data[1:], '')
+   elif data.startswith('U+'):
+      try:
+         code_point = int(data[2:], 16)
+         data = chr(code_point)
+      except ValueError:
+         data = ''
+   elif data.startswith(':') and data.endswith(':') and len(data) > 2:
+      data = emojize(data)
+   else:
+      try:
+         data = unicodedata.lookup(data)
+      except KeyError:
+         data = get_mnemonics().get(data, data)
+   data = unicodedata.normalize('NFC', data)
+   if len(data) != 1:
+      raise ValueError(f'Illegal character literal: {value}')
+   return data
+         
 class ZooIndenter(Indenter):
     """Indenter for the ZOO language."""
     NL_type = '_NL'
     OPEN_PAREN_types = [
-       '(',
-       '[',
-       '{',
+       'LPAR',
+       'LSQB',
+       'LBRACE',
        'STRING_LITERAL_QB',
     ]
     CLOSE_PAREN_types = [
-       ')',
-       ']',
-       '}',
+       'RPAR',
+       'RSQB',
+       'RBRACE',
        'STRING_LITERAL_BQ'
     ]
     INDENT_type = '_INDENT'
@@ -153,3 +295,11 @@ def parse_module(src: str, **opts) -> ParseTree:
    ast = transformer.transform(ast)
    print(transformer.get_module())
    return ast
+
+@cache
+def get_mnemonics() -> dict[str, str]:
+   with (Path(__file__).parent / "mnemonics.json").open('r', encoding="utf-8") as jsf:
+      return {
+         key: value['char']
+         for key, value in json.load(jsf).items()
+      }

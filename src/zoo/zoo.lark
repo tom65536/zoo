@@ -33,7 +33,7 @@
 # packages. A package consists of
 #
 # - a directory with a package descriptor
-#   in a ``package.yaml``
+#   in a ``cage.yaml``
 #   file and one or more ZOO module
 #   files, optionally organized in
 #   subdirectories, or
@@ -101,6 +101,7 @@ WS_INLINE: /(\p{Zs}|\t)+/
 #    not mix spaces, tabs and other
 #    white space for indentation.
 #
+# .. _comments:
 # Comments
 # --------
 #
@@ -172,6 +173,164 @@ SH_COMMENT: /[#\uFE5F\uFF03][^\r\n\p{Zp}\p{Zl}]*/
    
 _NL: (/\r\n|[\p{Zl}\p{Zp}\r\n]/ WS_INLINE? | SH_COMMENT)+
 
+# .. _names:
+# Names and Identifiers
+# ---------------------
+#
+# The rules for names correspond to
+# `UAX31`_ with the following restrictions:
+#
+# - Names are case sensitive.
+# - No consecutive underscores are allowed.
+# - A leading underscore alters the default accessibility:
+#   * internal for namespaces
+#   * positional only for arguments
+#   * private in any other context
+# - Names must not coincide with any
+#   of the reversed words.
+#
+# A name that consists of a single underscore
+# only has a special meaning depending on the
+# context:
+#
+# - an anonymous symbol in a defining context,
+# - a wildcard in structural pattern matching,
+# - the argument in an abonymous function context.
+#
+# It is recommended - though not enforced -
+# to stick to the following naming conventions:
+#
+# - Use lower-case words separated by
+#   underscores (snake-case) for function, method,
+#   property, variable and argument names
+#   (e.g. ``first_element``).
+# - Use capitalized words with no
+#   underscores (Pascal-style) for
+#   class, interface, type, type parameter
+#   and namespace identifiers
+#   (e.g. ``MutableCollection``).
+#   Acronyms should be written with
+#   only the first letter capitalized
+#   (i.e. ``HttpSocket`` rather than
+#   ``HTTPSocket``).
+# - Use single letter identifiers only
+#   if the meaning is clear from the context
+#   (e.g. a mathematical formula, as loop variable, etc.).
+# - Exported (public) names should be in
+#   English and ASCII only.
+# - Whenever applicable, use the appropriate
+#   grammatical form:
+#
+#   * Prefer nouns for classes.
+#     When implementing a pattern use the
+#     pattern name as part of the identifier.
+#   * Interfaces may be named by nouns
+#     or capabilities (Enumerable, Collapsible).
+#   * Pedicates should be preceeded by an
+#     auxilliary verb, such as: is, has, can, etc.
+#   * methods/functions characterized
+#     by their effect should be in
+#     imperative mood.
+#   * methods, functions, properties
+#     characterized by their result
+#     should either be named after the
+#     result (e.g. ``length``) or by
+#     a transformation (such as ``reversed``)
+#   * Avoid noisy prefixes such as ``get_``,
+#     ``compute_`` ans suffixes (e.g. ``Type``)
+#     if possible.
+# 
+#      >>> var first_entry = work_list.first
+#      ... class CustomerFactory
+#      ...    def create_customer as Customer
+#      ...       pass
+#      ...    def has_generated(customer as Customer) as Boolean
+#      ...       customer.creator == this
+#
+# .. definitions
+#
+# ::
+   
+NAME: /(\p{L}|\p{Nl}|\p{Other_ID_Start})(_?[\p{L}\p{Nl}\p{Other_ID_Start}\p{Mn}\p{Mc}\p{Nd}\p{Pc}\p{Other_ID_Continue}]+)*_?/
+PNAME: JOKER NAME
+JOKER: "_"
+
+# .. _reserved:
+# Reserved Words
+# --------------
+#
+# ::
+
+AND: "and"
+AS: "as"
+ASSERT: "assert"
+BREAK: "break"
+BUT: "but"
+BY: "by"
+CACHED: "cached"
+CASE: "case"
+CATCH: "catch"
+CLASS: "class"
+CONTINUE: "continue"
+CUE: "cue"
+DECREASING: "decreasing"
+DEF: "def"
+DEFER: "defer"
+DIV: "div"
+DOC: "doc"
+ELIF: "elif"
+ELSE: "else"
+ENSURES: "ensures"
+EVENT: "event"
+FORWARDER: "forwarder"
+GET: "get"
+IF: "if"
+IMMUTABLE: "immutable"
+IMPLEMENTS: "implements"
+IMPLIES: "implies"
+IN: "in"
+INHERITS: "inherits"
+INTERFACE: "interface"
+INTERNAL: "internal"
+INVARIANT: "invariant"
+IS: "is"
+MATCH: "match"
+MOD: "mod"
+NAMESPACE: "namespace"
+NEVER: "never"
+NEW: "new"
+NOT: "not"
+OBSOLETE: "obsolete"
+OLD: "old"
+OR: "or"
+PASS: "pass"
+PERMITS: "permits"
+PRIVATE: "private"
+PRO: "pro"
+PURE: "pure"
+PUBLIC: "public"
+REF: "ref"
+REQUIRES: "requires"
+RETURN: "return"
+SET: "set"
+SINGLETON: "singleton"
+STABLE: "stable"
+TEST: "test"
+THIS: "this"
+TODO: "todo"
+TRY: "try"
+TYPE: "type"
+UNLESS: "unless"
+UNSTABLE: "unstable"
+USE: "use"
+USING: "using"
+VALUE: "value"
+VAR: "var"
+WHERE: "where"
+WHEN: "when"
+WHILE: "while"
+XOR: "xor"
+
 # .. _literals:
 #
 # Literals
@@ -211,6 +370,9 @@ DECIMAL_INT_LITERAL: /[-+]?\p{Nd}+(_\p{Nd}+)*(da|h|[kKMGTPEZYRQ]i?)?/
 # a decimal point; an optional exponent
 # and a metric or binary prefix may be added.
 #
+#    >>> var pi = 3.14_15
+#    ... var floppy_sizy = 1.44Mi
+#
 # ::
 
 float_literal: DECIMAL_FLOAT_LITERAL
@@ -221,25 +383,115 @@ DECIMAL_FLOAT_LITERAL: /[-+]?\p{Nd}+(_\p{Nd}+)*\.(\p{Nd}+(_\p{Nd}+)*)?([eE][-+]?
 # Character Literals
 # ~~~~~~~~~~~~~~~~~~
 #
-# - RFC 1345
-# - 
+# A character represents a `Unicode Scalar Value`_,
+# which is any Unicode code point except
+# high-surrogate and low-surrogate code points.
+# In other words, the ranges of integers
+# 0 to D7FF<sub>16</sub> and
+# E000<sub>16</sub> to 10FFFF<sub>16</sub>
+# inclusive.
+#
+# Character literals are delimited by
+# single quotes/apostrophes (``'``) and may be
+# represented by:
+#
+# - the character itself (e.g. ``'Ē'``),
+# - the apostroph itself (``'''``)
+# - a backslash escape, i.e. one of
+#    * ``'\"'`` (double quote)
+#    * ``'\\'`` (literal backslash)
+#    * ``'\a'`` (audible bell, U+0007)
+#    * ``'\b'`` (backspace, U+0008)
+#    * ``'\e'`` (escape, U+001B)
+#    * ``'\f'`` (form feed, U+000C)
+#    * ``'\n'`` (line feed, U+000A)
+#    * ``'\r'`` (carriage return , U+000D)
+#    * ``'\t'`` (horizontal tab, U+0009)
+#    * ``'\v'`` (vertical tab, U+000B)   
+# - a mnemonic according to `RFC 1345`_ (e.g.``'E-'``),
+# - the hexadecimal codepoint value (e.g. ``'U+0112'),
+# - an emoji code (``':thumbsup:'``),
+# - a full unicode name (``'LATIN CAPITAL LETTER A WITH MACRON'``).
+#
+# Character literals are normalized to
+# NFC if necessary.
+#
+#   >>> var characters = [
+#   ...    'ß',
+#   ...    'ss',
+#   ...    'U+00DF',
+#   ...    'LATIN SMALL LETTER SHARP S',
+#   ...    ':croissant:',
+#   ...    '\\',
+#   ... ]
 #
 # ::
 
-CHAR_LITERAL: /'([^'\\\n\r\p{Zl}\p{Zp}]+|\\[^\n\r\p{Zl}\p{Zp}])'/
+char_literal: CHAR_LITERAL
+CHAR_LITERAL: /'([^'\\\n\r\p{Zl}\p{Zp}]+|\\['"\\abefnrtv]|')'/
  
   
 # String Literals
 # ~~~~~~~~~~~~~~~
 #
+# String literals are delimited by double
+# quotes and may be multiline literals.
+#
+# If a line break is introduced in a string
+# literal the first non-space character
+# of the next line must be an ampersand
+# (``&``) or the closing delimiter. A
+# backslash (``\\``) as last character in
+# the line tells the compiler to ignore
+# the line break.
+#
+# String interpolation is delimited by
+# ``\\(`` and ``\\)``.
+#
+# Backslash escapes are supported as
+# two letter escapes (e.g. ``"\\n"``)
+# and as character literal escapes.
+#
+#    >>> var story = "
+#    ...    &Intro
+#    ...    &=====
+#    ...    &Bj\'o/'rn brought \
+#    ...    &a \':croissant:', said \(author\).
+#    ...    &\n\'HORIZONTAL ELLIPSIS'"
+#
 # ::
 
-STRING_LITERAL_QQ: "\"" ( /[^\\\"\n\r\p{Zl}\p{Zp}]/ | /\\[Nbfnrtv]/ | "\\" CHAR_LITERAL | /\\?\p{Zs}*(\r\n|[\p{Zl}\p{Zp}\r\n])\p{Zs}*&/ )* (/\\?\p{Zs}*(\r\n|[\p{Zl}\p{Zp}\r\n])\p{Zs}*/)? "\""
-STRING_LITERAL_BQ: "\\)" ( /[^\\\"\n\r\p{Zl}\p{Zp}]/ | /\\[Nbfnrtv]/ | "\\" CHAR_LITERAL | /\\?\p{Zs}*(\r\n|[\p{Zl}\p{Zp}\r\n])\p{Zs}*&/ )* (/\\?\p{Zs}*(\r\n|[\p{Zl}\p{Zp}\r\n])\p{Zs}*/)? "\""
-STRING_LITERAL_BB: "\\)" ( /[^\\\"\n\r\p{Zl}\p{Zp}]/ | /\\[Nbfnrtv]/ | "\\" CHAR_LITERAL | /\\?\p{Zs}*(\r\n|[\p{Zl}\p{Zp}\r\n])\p{Zs}*&/ )* (/\\?\p{Zs}*(\r\n|[\p{Zl}\p{Zp}\r\n])\p{Zs}*/)? "\\("
-STRING_LITERAL_QB: "\"" ( /[^\\\"\n\r\p{Zl}\p{Zp}]/ | /\\[Nbfnrtv]/ | "\\" CHAR_LITERAL | /\\?\p{Zs}*(\r\n|[\p{Zl}\p{Zp}\r\n])\p{Zs}*&/ )* (/\\?\p{Zs}*(\r\n|[\p{Zl}\p{Zp}\r\n])\p{Zs}*/)? "\\("
-   
-   
+STRING_LITERAL_QQ: "\"" ( /[^\\\"\n\r\p{Zl}\p{Zp}]/ | /\\[abefnrtv]/ | "\\" CHAR_LITERAL | /\\?\p{Zs}*(\r\n|[\p{Zl}\p{Zp}\r\n])\p{Zs}*&/ )* (/\\?\p{Zs}*(\r\n|[\p{Zl}\p{Zp}\r\n])\p{Zs}*/)? "\""
+STRING_LITERAL_BQ: "\\)" ( /[^\\\"\n\r\p{Zl}\p{Zp}]/ | /\\[abefnrtv]/ | "\\" CHAR_LITERAL | /\\?\p{Zs}*(\r\n|[\p{Zl}\p{Zp}\r\n])\p{Zs}*&/ )* (/\\?\p{Zs}*(\r\n|[\p{Zl}\p{Zp}\r\n])\p{Zs}*/)? "\""
+STRING_LITERAL_BB: "\\)" ( /[^\\\"\n\r\p{Zl}\p{Zp}]/ | /\\[abefnrtv]/ | "\\" CHAR_LITERAL | /\\?\p{Zs}*(\r\n|[\p{Zl}\p{Zp}\r\n])\p{Zs}*&/ )* (/\\?\p{Zs}*(\r\n|[\p{Zl}\p{Zp}\r\n])\p{Zs}*/)? "\\("
+STRING_LITERAL_QB: "\"" ( /[^\\\"\n\r\p{Zl}\p{Zp}]/ | /\\[abefnrtv]/ | "\\" CHAR_LITERAL | /\\?\p{Zs}*(\r\n|[\p{Zl}\p{Zp}\r\n])\p{Zs}*&/ )* (/\\?\p{Zs}*(\r\n|[\p{Zl}\p{Zp}\r\n])\p{Zs}*/)? "\\("
+
+# Raw String Literals
+# ~~~~~~~~~~~~~~~~~~~
+#
+# Raw string literals are delimited by
+# backticks (grave). A double backtick
+# must be used to produce a literal backtick
+# inside a raw string.
+# There are no further escapes defined inside
+# a raw string.
+#
+#   >>> raw_stings = {
+#   ...    "regex": `3\.14\d*`,
+#   ...    "path": `C:\System\xyz.dll`,
+#   ...    "empty": ``,
+#   ...    "backticks": `see ``x```,
+#   ...    "multiline": `Shopping List:
+#   ...       & - milk
+#   ...       & - bread
+#   ...       & - flour
+#   ...       `
+#   ... }
+#
+# ::
+
+RAW_STRING_LITERAL: "`" ( /[^`\n\r\p{Zl}\p{Zp}]/ | "``" | /\p{Zs}*(\r\n|[\p{Zl}\p{Zp}\r\n])\p{Zs}*&/ )* (/\p{Zs}*(\r\n|[\p{Zl}\p{Zp}\r\n])\p{Zs}*/)? "`"
+       
 # .. _yfm:
 #
 # YAML Front Matter (YFM)
@@ -254,7 +506,7 @@ STRING_LITERAL_QB: "\"" ( /[^\\\"\n\r\p{Zl}\p{Zp}]/ | /\\[Nbfnrtv]/ | "\\" CHAR_
 # The YFM sections may also include
 # package manager data such as
 # dependencies (which would otherwise
-# be placed in a separate ``package.yaml``
+# be placed in a separate ``cage.yaml``
 # file) or other tool specific sections
 # (e.g. Citation File Format (`CFF`_)
 # or `publiccode.yml`_)
@@ -281,40 +533,111 @@ yfm: YFM _NL
 # Doc-Strings
 # -----------
 #
-# 
+# While `comments`_ are ignored completely
+# by the compiler, doc-strings add explanations
+# to the ource code which are extracted into
+# developer documentation (alongside with
+# declarations, doc-tests and contracts).
+#
+# Doc-strings look like normal string literals
+# preceded by the keyword ``doc``.
+#
+# String interpolations may comprise
+# symbols only (``\(Symbol\)``) which are
+# converted to cross-references.
+#
+# The doc-strings are interpreted as
+# markdown documents (CommonMark)
+# with some extensions. Issue numbers
+# (by hash-tag), pull-/merge-requests
+# (by exclamation mark), at-mentions
+# are resolved if the issue-tracker
+# and SCM are configured.
 #
 # ::
 
-doc: "doc" STRING_LITERAL_QQ _NL
-   | "doc" STRING_LITERAL_QB symbol_ref _doc_tail
+doc: DOC STRING_LITERAL_QQ _NL
+   | DOC STRING_LITERAL_QB symbol_ref _doc_tail
    
 _doc_tail: STRING_LITERAL_BQ _NL
    | STRING_LITERAL_BB symbol_ref _doc_tail 
 
-symbol_ref: NAME | PNAME
+symbol: NAME | PNAME
+symbol_ref: symbol
+   | symbol_ref "." symbol
 
 
 # Modules
 # =======
-# The code is organized in modules.
-# A module should correspond to a file.
+# The source code in ZOO is organized
+# in module files. One or more module files
+# in a common directory structure build
+# a package which may comprise a library
+# and/or one or more executable programs.
+# (You may also have a package defining
+# only tests, e.g. for integration testing
+# for multiple packages.)
+#
 # Module file names are expected to have
 # the suffix ``.zoo``.
-#
-#    >>> use system.io
-#    ... use system.net.http
 #
 # ::
 
 ?start: module
 
-module: _NL? _module_unit constructor? _NL*
-   | _NL? constructor _NL*
+# Module Structure
+# ----------------
+#
+# Modules may consist of up to three
+# sections, each of which may be missing.
+# The sections must appear in the given
+# order:
+#
+#  1. A module header comprising
+#     module `doc-strings<doc>`_ and/or
+#     YAML Front Matter (`YFM<yfm>`_),
+#  2. Definitions and declarations,
+#  3. A main `program`_ script.
+#
+# An empty file is a valid module.
+#
+# ::
+
+module: _NL? _module_unit executable? _NL*
+   | _NL? executable _NL*
+   
 
 _module_unit: module_head _unit?
    | _unit
 
-_common_unit: _common_head _unit
+# Module Head
+# -----------
+#
+# The module head may comprise
+# an alternating series of doc-strings
+# and YFM. Any YFM section following a
+# doc-string becomes part of the documentation.
+#
+#    >>> # Comments at the beginning
+#    ... # may provide a shebang line,
+#    ... # license headers and editor
+#    ... # settings.
+#    ... ---
+#    ... boring_hash: 0x14af5b7033bb9c
+#    ... ---
+#    ... doc "# The ACME Library."
+#    ... ---
+#    ... keywords:
+#    ... - GUI
+#    ... - reactive
+#    ... ---
+#    ... pass
+#
+# In the above example, the keywords
+# would be part of the documentation
+# while ``boring_hash`` won't.
+#
+# ::
 
 ?module_head:
    | _module_head_doc
@@ -324,28 +647,85 @@ _module_head_doc: doc
    | _module_head_yfm doc
 _module_head_yfm: yfm
    | _module_head_doc yfm
-   
-_common_head: doc?
 
+# Accessibility Rules
+# -------------------
+#
+# ZOO distinguishes three levels of
+# access to defined entities:
+#
+# public
+#    accessible without any restriction
+#    from any package, corresponds
+#    to a package export
+#
+# internal
+#    accessible from all module files
+#    within the same package but not
+#    from other packages
+#
+# private
+#    accessible only from within
+#    the same module file
+#
+# The accessibility level is determined
+# by the accessibility of the surrounding
+# scope (namespace or class), the name
+# and explicit attributes:
+#
+# - The accessibility can never be higher
+#   and by default is equal to the accessibility
+#   of the containing scope.
+# - If the accessibility is declared by an
+#   annotation, and not wider than the
+#   accessibility of the scope,
+#   no further rules apply.
+# - If the definition is not contained
+#   in any namespace or in a namespace
+#   containing a name part starting with
+#   an underscore, the maximum accessibility
+#   is internal.
+# - If the definition is contained in
+#   the (pseudo-)namespace called ``_``
+#   the accessibility is private.
+# - If the definition is not
+#   a namespace declaration and the defined
+#   name starts with an underscore the
+#   accessibility is set to private
+#   by defult (may be altered by an
+#   annotation). 
+#
+# ::
+   
+public: PUBLIC
+internal: INTERNAL
+private: PRIVATE
+
+#
+# Module Definitions and Declarations
+# -----------------------------------
+#
+# Modules may access external definitions
+# and add new definitions to different
+# namespaces. Possible declarations
+# and definitions comprise:
+#
+# - namespaces (new or existing),
+# - class declarations,
+# - interface declarations,
+# - type aliases
+# - (global) variables/fields
+# - property declarations
+# - test definitions
+# - cue definitions
+# - event declarations
+# - function declarations.
+#
+# ::
 
 _unit: use_directive+ _unit_feature*
    | _unit_feature+
-
-
-use_directive: "use" ns_alias? ns_id ("from" library_name)? _NL
-
-library_name: NAME | STRING_LITERAL_QQ
-
-ns_alias: ns_id "="
-
-namespace_decl: "namespace" ns_id _NL _INDENT _common_unit _DEDENT
-
-ns_id: PNAME
-   | JOKER
-   | NAME
-   | ns_id "." NAME
    
-
 _unit_feature: namespace_decl
    | class_def
    | interface_def
@@ -357,36 +737,398 @@ _unit_feature: namespace_decl
    | event_decl
    | method_decl
 
-class_def: "class" class_name type_params? _cons_param_list? _NL _INDENT _class_body _DEDENT
-interface_def: "interface" interface_name type_params? _NL _INDENT _iface_body _DEDENT
 
-class_name: NAME | PNAME
-interface_name: NAME | PNAME
-
-_cons_param_list: param_list
-   | default_param_list
-
-# A default parameter list ``(*)``
-# specifies that the list of parameters
-# should be generated from all field
-# variables
+# Namespaces
+# ----------
+#
+# Namespaces are used to avoid name collissions
+# and to structure groups of definitions
+# into logically and semantically coherent
+# hierarchies.
+#
+# Namespaces have dotted names, e.g.
+# ``System.Net.Http``, and may be nested;
+# The effective fully qualified name
+# is computed by concatenating the
+# name of the outer namespace with the
+# name of the inner namespace separated
+# by a dot.
+#
+#    >>> namespace Extra.Net.Http
+#    ...    class Server
+#    ...       pass
+#    ...
+#    ... namespace Extra.Net
+#    ...    namespace Http
+#    ...       class Client
+#    ...          pass
+#
+# In the above example both classes
+# exist in the same namespace
+# ``Extra.Net.Http``; their fully
+# qualified names are
+# ``Extra.Net.Http.Server`` and
+# ``Extra.Net.Http.Client``.
+#
+# Multiple packages may define symbols
+# in the same namespace. Redefining a
+# symbol with the same fully qualified
+# name within the same range of visibility
+# will, however, result in an error.
+#
 #
 # ::
 
-default_param_list: "(" AST ")"
+namespace_decl: NAMESPACE ns_id _NL _INDENT _unit _DEDENT
 
-_class_body: _class_head _class_feature* constructor?
-   | _class_feature+ constructor?
-   | constructor
+ns_id: PNAME
+   | JOKER
+   | NAME
+   | ns_id "." NAME
+
+# Use Directive
+# -------------
+#
+# Having to use the fully qualified name
+# everywhere would lead to quite verbous
+# source code. Therefore the ``use``
+# directive allows to make the contents
+# of a namespace visible without the need
+# to prefix each symbol by the namespace
+# id.
+#
+#    >>> use Extra.Net.Http
+#    ... server = Server(8080)
+#
+# In its second form the use statement
+# locally introduces an abbreviation for
+# the given namespace:
+#
+#    >>> use xhttp = Extra.Net.Http
+#    ... server = xhttp.Server(8080)
+#
+# This form is especially useful if simply
+# using several namespaces would lead to
+# name clashes.
+#
+# ::
+
+use_directive: USE ns_alias? ns_id _NL
+
+ns_alias: ns_id "="
+
+# .. _program:
+# Programs
+# --------
+#
+# Programs can be defined in several
+# ways:
+#
+# - as executable code block at the end
+#   of a module,
+# - as a `cue`_ called ``main`` at
+#   the module level,
+# - as a `cue`_ called ``main``
+#   inside a class.
+#
+# To run or compile a program the corresponding
+# module (file name) or class (fully qualified class name)
+# must be specified.
+#
+# ::
+
+executable: block
+
+
+# Features
+# ========
+#
+# .. _contract:
+# Contracts
+# ---------
+#
+# ZOO defines four kinds of contracts:
+#
+# Preconditions
+#    denote predicates that are
+#    *required* to be true immediately
+#    before a method, function, property
+#    or cue is run. Overwriting may
+#    weaken preconditions but never
+#    enforce stronger constraints.
+#    A failing precondition is blamed
+#    to the caller (i.e. indicates a bug
+#    in the calling code). Every statement
+#    in a precondition must evaluate to a
+#    Boolean value.
+# Postconditions
+#    denote predicates that are
+#    *ensured* to be true immediately
+#    before a method, function, property
+#    or cue returns. Overwriting may only
+#    add constraints, postconditions are
+#    never weakened. A failing postcondition
+#    is blamed to the invoked code.
+#    Every statement in a postconditon
+#    must evaluate to a Boolean value
+#    or to a function mapping the result
+#    of the enclosing function to a
+#    Boolean value. Postconditions my use
+#    old-expressions to refer to values
+#    before the function evaluation
+# Invariants
+#    denote expressions that must
+#    evaluate to the same value before
+#    and at the end of an invokation.
+#    Invariants may be declared at the
+#    class or interface level applying
+#    to all methods, properties and cues
+#    of the class or all implementations
+#    of the interface.
+#    Invariants may be declared in a loop
+#    in which case they must hold before
+#    and after each iteration.
+# Variants
+#    denote expressions that must
+#    be *decreasing*, i.e. whose type
+#    ensures an ordering, a lower bound
+#    and is inductively generated
+#    (currently only non-negative integers).
+#    Variants are checked at every recursion step
+#    if attached to a recursive function,
+#    and at each iteration if attached to a
+#    loop.
+#
+# Contracts are always run inside tests
+# but can be turned off in production
+# runs for performance reasons.
+#
+#    >>> def factorial(x as Integer) as Integer
+#    ...    is pure, immutable, cached
+#    ...    doc "Compute the factorial of \(x\)."
+#    ...    requires x >= 0
+#    ...    ensures
+#    ...       doc "the factorial of \(x\)
+#    ...       & is never smaller than \(x\)."
+#    ...       _ >= x
+#    ...    decreasing x
+#    ...    # --------------
+#    ...    return if x > 1
+#    ...       x * factorial(x - 1)
+#    ...    else
+#    ...       1
+#    ...
+#
+# .. end
+#
+# ::
+
+requires_contract: REQUIRES _contract_impl
+ensures_contract: ENSURES _contract_impl
+invariant: INVARIANT _contract_impl
+decreases: DECREASING _contract_impl
+
+_contract_impl: expr_stmt
+   | _NL _INDENT _expr_block _DEDENT
+
+_expr_block: doc expr_stmt*
+   | expr_stmt+
+   | _pass
+
+
+# .. _mutability:
+# Mutability and Side-Effects
+# ---------------------------
+#
+# Side-effects are checked by the
+# mechanism of old-transformations
+# as defined in [Ierusalimschy1995]_.
+# If a function, method, property getter
+# or setter or a cue is marked as
+# ``pure`` it is guaranteed to be
+# side-effect free (otherwise a compiler
+# error is raised).
+#
+# .. I remove transitively pure* for now
+# ::
+
+pure: PURE
+
+# Several features can be annotated as
+# immutable, having a slightly different
+# meaning in ech case:
+#
+# - Classes and interfaces marked as
+#   immutable imply that all fields
+#   must be immutable.
+# - Functions, methods, cues, property
+#   getters and setters marked as immutable
+#   must depend only on their parameters
+#   and on immutable quantities.
+#
+# If the attribute ``immutable`` is followed
+# by an asterisk the feature is transitively
+# immutable. A field marked as transitively
+# immutable must have a type which is also
+# transitively immutable.
+#
+# ::
+
+immutable: IMMUTABLE AST?
+
+# .. _maturity:
+# Maturity
+# --------
+#
+# Features can be annotated with
+# maturity attributes.
+#
+# unstable
+#    Code which is not (yet) production
+#    ready (experimental, WIP, incubating).
+#    This code is not required to follow
+#    any versioning best practices and may
+#    change or disappear without further notice.
+# stable
+#    Code for production use. Stable code
+#    may only receive non-breaking changes
+#    and must be obsoleted before breaking
+#    changes or removal.
+# obsolete
+#    Code which should not be used anymore.
+#    This status should be kept for long
+#    enough to give developers the chance
+#    to react accordingly.
+#
+# There is no strict behavuor for the
+# compiler how violations are defined.
+# This may be configured by the application.
+# Using obsolete code from non-obsolete code
+# should always trigger a warning.
+# Additional rules may impose that stable code
+# should not invoke unstable code.
+#
+# The attributes ``unstable`` and
+# ``obsolete`` should be followed by a
+# message indicating the reason for the
+# attribute.
+#
+# ::
+
+unstable: UNSTABLE STRING_LITERAL_QQ?
+stable: STABLE
+obsolete: OBSOLETE STRING_LITERAL_QQ?
+
+# .. _attr:
+# Custom Attributes
+# -----------------
+#
+# Features may be annotated with custom
+# attributes which may be evaluated by
+# the compiler, development tools or by
+# libraries at runtime.
+#
+# The symbol reference must point to
+# an immutable class with a pure
+# initializer.
+#
+#    >>> def func(x)
+#    ...    is cached, System.Annotations.Cache.LRU(size=200)
+#    ...    return difficult_computation(x)
+#
+# .. end
+#
+# ::
+
+attr_expr: symbol_ref actual_params?
    
-_iface_body: _iface_head _iface_feature*
-   | _iface_feature+ 
+# .. _class:
+# Classes
+# -------
+#
+# Classes define the shared aspects
+# of objects, i.e. the instances created
+# from that class.
+#
+# Unlike most object-oriented languages
+# only interfaces support inheritance
+# while reuse of classes is implemented by
+# automated delegation.
+#
+# Instances are created from classes
+# by invoking a constructor, which syntactically
+# is equivalent to passing prameters to the
+# class name.
+#
+#    >>> class Complex
+#    ...    var re as Real = 0.0
+#    ...    var im as Real = 0.0
+#    ...
+#    ... i = Complex(im=1.0)
+#
+# In the above example no explicit
+# constructor has been defined, so
+# a default constructor has been generated.
+#
+# The regular way of defining a constructor
+# is by implementing a `cue`_ called ``init``.
+#
+#    >>> class Complex
+#    ...    var re as Real
+#    ...    var im as Real
+#    ...
+#    ...    cue init(re as Real = 0.0, im as Real = 0.0)
+#    ...       this.re = re
+#    ...       this.im = im
+#    ...
+#    ... i = Complex(im=1.0)
+#
+# To relieve the burden of typing somewhat
+# there is an inline form of denoting a
+# constructor, which may be used whenever
+# a class has only one single constructor.
+#
+#    >>> class Class(re as Real = 0.0, im as Real = 0.0)
+
+#    ...    var re as Real
+#    ...    var im as Real
+#    ...
+#    ...    this.re = re
+#    ...    this.im = im
+#    ...
+#    ... i = Complex(im=1.0)
+#
+# In this reduced form the parameter
+# list moves to the first line and the
+# constructor statements move to the end
+# of the class definition. Pre- and post-
+# conditions defined at the class level
+# refer to the constructor.
+#
+# The latter example could be simplified further
+# by moving the assignment to the initializer.
+#
+#    >>> class Class(re as Real = 0.0, im as Real = 0.0)
+#    ...    var re as Real = re
+#    ...    var im as Real = im
+#    ...
+#    ... i = Complex(im=1.0)
+#
+# Classes can have generic type parameters
+# which can be constrined using ``where``
+# clauses.
+#
+# ::
+
+class_def: CLASS class_name type_params? param_list? _NL _INDENT _class_body _DEDENT
+class_name: NAME | PNAME
+
+_class_body: _class_head _class_feature* executable?
+   | _class_feature+ executable?
+   | executable
 
 _class_head: doc
    | _class_head_element+ doc?
-   
-_iface_head: doc
-   | _iface_head_element+ doc?
    
 _class_head_element: class_is_clause
    | where_clause
@@ -394,14 +1136,25 @@ _class_head_element: class_is_clause
    | forwarder_clause
    | requires_contract
    | ensures_contract
+   | invariant
+   | decreases
 
-_iface_head_element: iface_is_clause
-   | where_clause
-   | inherits_clause
+#
+# Class Attributes
+# ~~~~~~~~~~~~~~~~
+#
+# Classes can be annotated with the
+# following attributes:
+#
+# - Accessibility modifiers (public, private, internal)
+# - Maturity indicators (stable, unstable, obsolete)
+# - Mutability (immutable)
+# - Custom attributes
+# - ``cached`` and ``pure`` refer to the constructor
+#
+# ::
 
-inherits_clause: "inherits" type_expr ("," type_expr)* _NL
-
-class_is_clause: "is" _class_attrib ("," _class_attrib)* _NL
+class_is_clause: IS _class_attrib ("," _class_attrib)* _NL
 _class_attrib: obsolete
    | stable
    | unstable
@@ -411,42 +1164,129 @@ _class_attrib: obsolete
    | singleton
    | pure
    | immutable
+   | cached
    | attribute_expr
 
-iface_is_clause: "is" _iface_attr ("," _iface_attr)* _NL
+# .. _singleton:
+# Singleton Classes
+# ~~~~~~~~~~~~~~~~~ 
+# The singleton annotation hs the
+# following effect:
+#
+# - The class is required to have at
+#   most one consteuctor.
+# - If a constructor is defined it must
+#   have an empty parameter list;
+#   if no constructor is defined, all fields
+#   must have an inizializer (no default
+#   constructor is generated).
+# - Only the first constructor call
+#   is executed; all further calls just
+#   return the result (identical instance)
+#   of the first call.
+# - The underlying implementtion guarantees
+#   the absence of race conditions.
+# ::
+  
+singleton: SINGLETON
+
+#
+# Partial Implementations
+# ~~~~~~~~~~~~~~~~~~~~~~~
+#
+# ::
+
+forwarder_clause: FORWARDER _generic_constraint _NL
+ 
+# .. _interface:
+# Interfaces
+# ----------
+#
+# .. _alias:
+# Type Aliases
+# ------------
+#
+# .. _field:
+# Fields and Global Variables
+# ---------------------------
+#
+# .. _function:
+# Functions
+# ---------
+#
+# .. _cue:
+# Cues
+# ----
+#
+# .. _property:
+# Properties
+# ----------
+#
+# .. _event:
+# Events
+# ------
+#
+# .. _test:
+# Tests
+# -----
+#
+#
+# ::
+
+
+
+cached: CACHED
+
+interface_def: INTERFACE interface_name type_params? _NL _INDENT _iface_body _DEDENT
+
+interface_name: NAME | PNAME
+   
+_iface_body: _iface_head _iface_feature*
+   | _iface_feature+ 
+   
+_iface_head: doc
+   | _iface_head_element+ doc?
+
+_iface_head_element: iface_is_clause
+   | where_clause
+   | inherits_clause
+
+inherits_clause: INHERITS type_expr ("," type_expr)* _NL
+
+iface_is_clause: IS _iface_attr ("," _iface_attr)* _NL
 _iface_attr: obsolete
    | stable
    | unstable
    | public
    | private
    | internal
-   | pure
    | attribute_expr
    | type_def
 
 type_params: "[" NAME ("," NAME)* "]"
 
-where_clause: "where" NAME _generic_constraint _NL
+where_clause: WHERE NAME _generic_constraint _NL
 
 _generic_constraint: generic_implements
    | generic_permits
    | generic_is
+   | generic_cons
 
-generic_implements: "implements" type_expr
-generic_permits: "permits" type_expr
-generic_is: "is" _generic_class_attrib
+generic_implements: IMPLEMENTS type_expr
+generic_permits: PERMITS type_expr
+generic_is: IS _generic_class_attrib
+generic_cons: LPAR (param_constraint ("," param_constraint) ","? )? RPAR cons_is?
+cons_is: IS cons_attr ("," cons_attr)*
+cons_attr: pure | immutable
 
-_generic_class_attrib: pure
-   | immutable
+_generic_class_attrib: immutable
    | singleton
    | attribute_expr
 
-_implements_clauses: "implements" implements_clause ("," implements_clause)* _NL
+_implements_clauses: IMPLEMENTS implements_clause ("," implements_clause)* _NL
 implements_clause: type_expr _per_clause?
 
-forwarder_clause: "forwarder" _generic_constraint _NL
-
-permits_clause: "permits" symbol_ref ("," symbol_ref)* _NL
+permits_clause: PERMITS symbol_ref ("," symbol_ref)* _NL
 
 _class_feature: invariant
    | var_field_decl
@@ -470,13 +1310,13 @@ _abstract_property: abstract_full_pro
 _abstract_body: _method_contracts+
    | doc _method_contracts*
 
-abstract_full_pro: "pro" pro_name type_annotation _NL (_INDENT _ap_head _DEDENT)?
-abstract_getter: "get" pro_name type_annotation _NL (_INDENT _ap_head _DEDENT)?
-abstract_setter: "set" pro_name type_annotation _NL (_INDENT _ap_head _DEDENT)?
+abstract_full_pro: PRO pro_name type_annotation _NL (_INDENT _ap_head _DEDENT)?
+abstract_getter: GET pro_name type_annotation _NL (_INDENT _ap_head _DEDENT)?
+abstract_setter: SET pro_name type_annotation _NL (_INDENT _ap_head _DEDENT)?
 
 _ap_head: ap_is_clause+ _abstract_body?
    | _abstract_body
-ap_is_clause: "is" _ap_attr ("," _ap_attr)* _NL
+ap_is_clause: IS _ap_attr ("," _ap_attr)* _NL
 _ap_attr: obsolete
    | stable
    | unstable
@@ -484,10 +1324,10 @@ _ap_attr: obsolete
    | immutable
    | attr_expr
    
-abstract_method: "def" method_name type_params? param_list? type_annotation? _NL (_INDENT _am_head _DEDENT)?
+abstract_method: DEF method_name type_params? param_list? type_annotation? _NL (_INDENT _am_head _DEDENT)?
 _am_head: am_is_clause+ _abstract_body?
    | _abstract_body
-am_is_clause: "is" _am_attr ("," _am_attr)* _NL
+am_is_clause: IS _am_attr ("," _am_attr)* _NL
 _am_attr: obsolete
    | stable
    | unstable
@@ -496,10 +1336,10 @@ _am_attr: obsolete
    | attr_expr
    
       
-abstract_cue: "cue" cue_name type_params? param_list? type_annotation? _NL (_INDENT _ac_head _DEDENT)?
+abstract_cue: CUE cue_name type_params? param_list? type_annotation? _NL (_INDENT _ac_head _DEDENT)?
 _ac_head: ac_is_clause+ _abstract_body?
    | _abstract_body
-ac_is_clause: "is" _ac_attr ("," _ac_attr)* _NL
+ac_is_clause: IS _ac_attr ("," _ac_attr)* _NL
 _ac_attr: obsolete
    | stable
    | unstable
@@ -507,10 +1347,10 @@ _ac_attr: obsolete
    | immutable
    | attr_expr 
      
-abstract_event: "event" event_name type_params? param_list? _NL (_INDENT _ae_head _DEDENT)?
+abstract_event: EVENT event_name type_params? param_list? _NL (_INDENT _ae_head _DEDENT)?
 _ae_head: ae_is_clause+ _abstract_body?
    | _abstract_body
-ae_is_clause: "is" _ae_attr ("," _ae_attr)* _NL
+ae_is_clause: IS _ae_attr ("," _ae_attr)* _NL
 _ae_attr: obsolete
    | stable
    | unstable
@@ -518,14 +1358,14 @@ _ae_attr: obsolete
    | immutable
    | attr_expr
    
-var_field_decl: "var" var_name type_annotation? initializer? _NL (_INDENT _var_head _DEDENT)?
+var_field_decl: VAR var_name type_annotation? initializer? _NL (_INDENT _var_head _DEDENT)?
 
 _var_head: doc
    | _var_head_element+ doc?
    
 _var_head_element: var_is_clause
 
-var_is_clause: "is" _var_attr ("," _var_attr)* _NL
+var_is_clause: IS _var_attr ("," _var_attr)* _NL
 
 _var_attr: private
    | public
@@ -544,9 +1384,9 @@ property_decl: _full_property_decl
    | _getter_only_decl
    | _setter_only_decl
    
-_full_property_decl: "pro" pro_name type_annotation? _pro_impl
-_getter_only_decl: "get" pro_name type_annotation? _xet_impl
-_setter_only_decl: "set" pro_name type_annotation? _xet_impl
+_full_property_decl: PRO pro_name type_annotation? _pro_impl
+_getter_only_decl: GET pro_name type_annotation? _xet_impl
+_setter_only_decl: SET pro_name type_annotation? _xet_impl
 pro_name: NAME
    | PNAME
    | param_list
@@ -559,7 +1399,7 @@ _pro_head: _pro_head_element+ doc? test_decl*
    | test_decl+
 _pro_head_element: pro_is_clause
 
-pro_is_clause: "is" _pro_attr ("," _pro_attr)* _NL
+pro_is_clause: IS _pro_attr ("," _pro_attr)* _NL
 _pro_attr: obsolete
    | stable
    | unstable
@@ -577,32 +1417,32 @@ _xet_body: _pro_head? _xet_impl_body
 _xet_impl_body: _method_contracts+ block?
    | block
 
-setter_impl: "set" _NL _INDENT _xet_impl_body _DEDENT
+setter_impl: SET _NL _INDENT _xet_impl_body _DEDENT
    
-getter_impl: "get" _NL _INDENT _xet_impl_body _DEDENT
+getter_impl: GET _NL _INDENT _xet_impl_body _DEDENT
   
-_per_clause: "per" ("var" | var_name)
+_per_clause: BY (VAR | var_name)
 
-test_decl: "test" (doc | _NL) _INDENT _test_contents _DEDENT
+test_decl: TEST (doc | _NL) _INDENT _test_contents _DEDENT
 _test_contents: _test_head_element+ block?
     | block
     
 _test_head_element: test_is_clause
    | test_param_spec
 
-test_is_clause: "is" _test_attr ("," _test_attr)* _NL
+test_is_clause: IS _test_attr ("," _test_attr)* _NL
 _test_attr: attr_expr
 
-test_param_spec: "var" test_param ("," test_param)* _test_param_initializer
+test_param_spec: VAR test_param ("," test_param)* _test_param_initializer
 test_param: var_name type_annotation?
    | JOKER
 _test_param_initializer: test_param_generator
    | test_param_setter
    | _NL _INDENT block _DEDENT
 test_param_setter: "=" inline_expr _NL
-test_param_generator: "in" inline_expr _NL
+test_param_generator: IN inline_expr _NL
 
-cue_decl: "cue" cue_name type_params? param_list? type_annotation? _NL _INDENT _cue_contents _DEDENT
+cue_decl: CUE cue_name type_params? param_list? type_annotation? _NL _INDENT _cue_contents _DEDENT
 _cue_contents: _cue_head block?
    | block
 
@@ -613,7 +1453,7 @@ _cue_head: _cue_head_element+ doc? _method_contracts* test_decl*
    
 _cue_head_element: cue_is_clause
 
-cue_is_clause: "is" _cue_attrib ("," _cue_attrib)*
+cue_is_clause: IS _cue_attrib ("," _cue_attrib)*
 _cue_attrib: pure
    | attribute_expr
    | obsolete
@@ -623,12 +1463,12 @@ _cue_attrib: pure
 
 cue_name: NAME
    
-event_decl: "event" event_name type_params? param_list? _NL (_INDENT _event_head _DEDENT)?
+event_decl: EVENT event_name type_params? param_list? _NL (_INDENT _event_head _DEDENT)?
 
 event_name: NAME | PNAME
 _event_head: event_is_clause+ doc?
    | doc
-event_is_clause: "is" _event_attrib ("," _event_attrib)* _NL
+event_is_clause: IS _event_attrib ("," _event_attrib)* _NL
 _event_attrib: obsolete
    | stable
    | unstable
@@ -638,7 +1478,7 @@ _event_attrib: obsolete
    | attribute_expr
 
    
-method_decl: "def" method_name type_params? param_list? type_annotation? _NL _INDENT _method_contents _DEDENT
+method_decl: DEF method_name type_params? param_list? type_annotation? _NL _INDENT _method_contents _DEDENT
 method_name: NAME | PNAME
 _method_contents: _method_head _method_contracts* test_decl* block?
    | _method_contracts+ test_decl* block?
@@ -648,7 +1488,7 @@ _method_head: _method_head_element+ doc?
    | doc
 _method_head_element: method_is_clause
    | where_clause
-method_is_clause: "is" _method_attrib ("," _method_attrib)* _NL
+method_is_clause: IS _method_attrib ("," _method_attrib)* _NL
 _method_attrib: pure
    | immutable
    | obsolete
@@ -665,24 +1505,12 @@ _method_contracts: requires_contract
    | invariant
    | decreases
 
-requires_contract: "requires" _contract_impl
-ensures_contract: "ensures" _contract_impl
-invariant: "invariant" _contract_impl
-decreases: "decreases" _contract_impl
-
-_contract_impl: expr_stmt
-   | _NL _INDENT _expr_block _DEDENT
-_expr_block: doc expr_stmt*
-   | expr_stmt+
-   | _pass
 
 param_list: "(" formal_args? ")"
 
 formal_args: formal_arg ("," formal_arg)* ","?
 formal_arg: arg_name type_annotation? initializer?
 arg_name: NAME | PNAME | JOKER
-
-constructor: block
 
 block: statement+
 
@@ -701,18 +1529,18 @@ statement: _pass
    | continue_stmt
    | return_stmt
 
-assertion: "assert" inline_expr _NL (_INDENT doc _DEDENT)?
-break_stmt: _jump_cond? "break" (rhs |_NL)
-continue_stmt: _jump_cond? "continue" _NL
-return_stmt: _jump_cond? "return_stmt" (rhs | _NL)
+assertion: ASSERT inline_expr _NL (_INDENT doc _DEDENT)?
+break_stmt: _jump_cond? BREAK (rhs |_NL)
+continue_stmt: _jump_cond? CONTINUE _NL
+return_stmt: _jump_cond? RETURN (rhs | _NL)
 
 _jump_cond: when_clause
    | unless_clause
 
-when_clause: "when" inline_expr
-unless_clause: "unless" inline_expr
+when_clause: WHEN inline_expr
+unless_clause: UNLESS inline_expr
 
-defer_stmt: _jump_cond? "defer" _NL (_INDENT block _DEDENT)?
+defer_stmt: _jump_cond? DEFER _NL (_INDENT block _DEDENT)?
 
 expr_stmt: (lhs assign_op)* rhs
 
@@ -726,16 +1554,16 @@ _last_expr: expr_with_body
 lhs: (assignable ",")* assignable
 assignable: inline_expr
    | var_name type_annotation
-   | "new" var_name
+   | NEW var_name
  
 expr_with_body: inline_expr lambda_args? _NL (_INDENT body_block _DEDENT)?
-object_init: inline_expr "but" _NL _INDENT body_block _DEDENT   
-if_expr: "if" inline_expr _NL _INDENT block _DEDENT elif_clause* else_clause?
-while_expr: "while" inline_expr _NL _INDENT body_block _DEDENT else_clause?
-match_expr: "match" inline_expr ("," inline_expr)* ","? _NL _INDENT case_clause+ else_clause? _DEDENT
-elif_clause: "elif" inline_expr _NL _INDENT body_block _DEDENT
-else_clause: "else"  _NL _INDENT body_block _DEDENT
-case_clause: "case" pattern guard? _NL _INDENT body_block _DEDENT
+object_init: inline_expr BUT _NL _INDENT body_block _DEDENT   
+if_expr: IF inline_expr _NL _INDENT block _DEDENT elif_clause* else_clause?
+while_expr: WHILE inline_expr _NL _INDENT body_block _DEDENT else_clause?
+match_expr: MATCH inline_expr ("," inline_expr)* ","? _NL _INDENT case_clause+ else_clause? _DEDENT
+elif_clause: ELIF inline_expr _NL _INDENT body_block _DEDENT
+else_clause: ELSE  _NL _INDENT body_block _DEDENT
+case_clause: CASE pattern guard? _NL _INDENT body_block _DEDENT
 
 guard: _jump_cond
 lambda_args: "|" formal_args? "|"
@@ -812,9 +1640,9 @@ _error_handler_expr: _atomic_expr
    | try_expr
    | catch_expr
    
-try_expr: "try" _atomic_expr
+try_expr: TRY _atomic_expr
 
-catch_expr: _atomic_expr "catch" _atomic_expr
+catch_expr: _atomic_expr CATCH _atomic_expr
 
 _atomic_expr: never
    | todo
@@ -825,8 +1653,8 @@ _atomic_expr: never
 ?call_expr: subscript_expr
    | call_expr "?"? actual_params
   
-ref_expr: "ref" subscript_expr
-old_expr: "old" subscript_expr
+ref_expr: REF subscript_expr
+old_expr: OLD subscript_expr
 
 ?subscript_expr: subscript_expr subscript_operator method_name
    | _subscribable_expr
@@ -839,6 +1667,7 @@ _subscribable_expr: "(" inline_expr ")"
    | string_literal
    | int_literal
    | float_literal
+   | char_literal
    | named_ref
 
 subscript_operator: SUBS
@@ -848,15 +1677,18 @@ named_ref: NAME
    | PNAME
    | JOKER
    | value
+   | THIS
    
-value: "value"
+value: VALUE
    
-never: "never"
-todo: "todo"
+never: NEVER
+todo: TODO
 
 string_literal: STRING_LITERAL_QQ
+   | RAW_STRING_LITERAL
+   
 string_interpolation: STRING_LITERAL_QB inline_expr (STRING_LITERAL_BB inline_expr)* STRING_LITERAL_BQ
-list_expr: "[" (_simple_entry ("," _simple_entry)* ","?)? "]"
+list_expr: LSQB (_simple_entry ("," _simple_entry)* ","?)? RSQB
 map_expr: "{" (_map_entry ("," _map_entry)* ","?)? "}"
 tuple_expr: "(" (inline_expr "," (inline_expr ",")* inline_expr?)? ")"
 
@@ -899,6 +1731,8 @@ pattern_limit_op: EQ
    | NOT IN
 
 literal_pattern: int_literal
+   | float_literal
+   | char_literal
    | string_pattern
    
 string_pattern: STRING_LITERAL_QQ
@@ -906,7 +1740,7 @@ string_pattern: STRING_LITERAL_QQ
 string_pattern_tail: STRING_LITERAL_BQ
    | STRING_LITERAL_BB pattern_name string_pattern_tail
    
-stream_pattern: "[" (_stream_pat_entry ("," _stream_pat_entry)* ","?)? "]"
+stream_pattern: LSQB (_stream_pat_entry ("," _stream_pat_entry)* ","?)? RSQB
 
 _stream_pat_entry: comb_pattern
    | ast_pattern
@@ -928,7 +1762,7 @@ any_pattern: JOKER
    
 pattern_name: PNAME
 
-type_def: "type" type_name type_params? formal_args? type_annotation _NL (_INDENT _type_head _DEDENT)?
+type_def: TYPE type_name type_params? formal_args? type_annotation _NL (_INDENT _type_head _DEDENT)?
 type_name: NAME | PNAME
 _type_head: doc
    | _type_head_element+ doc?
@@ -938,7 +1772,7 @@ _type_head_element: type_is_clause
    | requires_contract
    | ensures_contract
 
-type_is_clause: "is" _type_attr ("," _type_attr)*
+type_is_clause: IS _type_attr ("," _type_attr)*
 
 _type_attr: public
    | private
@@ -990,45 +1824,23 @@ actual_params: "(" (actual_param ("," actual_param)* ","?)? ")"
 actual_param: inline_expr
    | NAME "=" inline_expr
    
-attr_expr: attr_name actual_params?
-attr_name: NAME | PNAME
-   
-type_annotation: "as" type_expr
 
-_pass: "pass" _NL?
+type_annotation: AS type_expr
+
+_pass: PASS _NL?
 
 attribute_expr: NAME
-
-unstable: "unstable"
-stable: "stable"
-obsolete: "obsolete" STRING_LITERAL_QQ?
-public: "public"
-private: "private"
-internal: "internal"
-singleton: "singleton"
-pure: "pure" AST?
-immutable: "immutable" AST?
-cached: "cached"
 
 
 
 AST: "*"
 OPT: "?"
-NAME: /(?!_)(?=\p{L}|\p{Nl}|\p{Other_ID_Start})[\p{L}\p{Nl}\p{Other_ID_Start}\p{Mn}\p{Mc}\p{Nd}\p{Pc}\p{Other_ID_Continue}_]+/
-PNAME: JOKER NAME
-JOKER: "_"
 
 
 ASSIGN: "="
 ALTER: "+=" | "-=" | "*=" | "/=" | "^="
 
-AND: "and"
-OR: "or"
-XOR: "xor"
-IMPLIES: "implies"
-NOT: "not"
-DIV: "div"
-MOD: "mod"
+
 PLUS_OP: "+"
 MINUS_OP: "-"
 SLASH: "/"
@@ -1038,7 +1850,6 @@ LT: "<"
 LEQ: "<="
 GT: ">"
 GEQ: ">="
-IN: "in"
 PIPE: "|>"
 EPIP: "<|"
 
@@ -1047,7 +1858,14 @@ SUBS_MAYBE: "?."
 
 EXCLAM: "!"
 
+LSQB: "["
+RSQB: "]"
+
 # .. rubric:: Citations
+#
+# .. [Ierusalimschy1995] Roberto Ierusalimschy, Noemi Rodriguez.
+#    1995. Side-effect free functions in object-oriented languages.
+#    Computer Languages, Volume 21, Issues 3–4, 1995, Pages 129-146, ISSN 0096-0551.
 #
 # .. [Viega1998] John Viega, Bill Tutt, and Reimer Behrends.
 #    1998. Automated Delegation is a Viable Alternative to Multiple Inheritance in Class Based Languages.
@@ -1056,3 +1874,6 @@ EXCLAM: "!"
 # .. _YAML: https://yaml.org
 # .. _CFF: https://citation-file-format.github.io/
 # .. _publiccode.yml: https://yml.publiccode.tools/
+# .. _Unicode Scalar Value: https://www.unicode.org/glossary/#unicode_scalar_value
+# .. _RFC 1345: https://datatracker.ietf.org/doc/html/rfc1345
+# .. _UAX31: https://www.unicode.org/reports/tr31/
